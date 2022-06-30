@@ -1,0 +1,66 @@
+@page "/admin"
+@using FileHostingApi.Data
+@using GeneralPurposeLib
+
+<h3>Admin</h3>
+<p>Token Generator</p>
+
+<div>
+    <div style="padding-bottom: 10px;">
+        
+        <label class="form-label">Max Upload Size</label>
+        <input
+            @bind="_maxUpload"
+            @oninput='ui => { try {_maxUpload = (long) double.Parse(ui.Value!.ToString()!); } catch {}}'
+            style="background-color: rgb(34, 34, 34); color: #ffffff"
+            class="form-control"
+            type="number"/>
+
+        <label class="form-label">Admin Token</label>
+        <input
+            @bind="_adminToken"
+            @oninput='ui => _adminToken = ui.Value!.ToString()'
+            style="background-color: rgb(34, 34, 34); color: #ffffff"
+            class="form-control"
+            type="text"/>
+        
+    </div>
+
+    <button class="btn btn-lg btn-primary btn-block" onclick="@GenerateToken">
+        Generate Token
+    </button>
+    
+    <div style="padding-top: 10px">
+        <textarea class="form-control" rows="3" style="background-color: rgb(34, 34, 34); color: #ffffff">
+            @_token
+        </textarea>
+    </div>
+
+</div>
+
+@code {
+    
+    private string _token = "";
+    private string? _adminToken = "";
+    private long _maxUpload;
+
+    private void GenerateToken() {
+        if (Program.Config == null) throw new Exception();
+
+        TokenHandler tokenHandler = new (Program.Config);
+
+        if (!tokenHandler.ValidateCurrentToken(_adminToken, out _, out bool isAdmin)) {
+            _token = "Invalid Admin Token";
+            return;
+        }
+        if (!isAdmin) {
+            _token = "You must provide an admin token";
+            return;
+        }
+        
+        Logger.Info("Generating new token (Max Upload Size: " + _maxUpload + ")");
+        _token = tokenHandler.GenerateToken(_maxUpload);
+
+    }
+    
+}

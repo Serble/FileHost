@@ -1,0 +1,139 @@
+﻿@page "/"
+@using FileHostingApi.Data
+
+<PageTitle>File Hosting</PageTitle>
+
+<h1>File Host</h1>
+<p>
+    This service allows you to upload a file and get a link that 
+    anyone can use to download the file. It will also 
+    embed the file in services like Discord.
+</p>
+
+@* If the file hasn't been uploaded *@
+@if (!_uploaded && !_uploading) {
+    <div>
+        <div style="padding-bottom: 10px;">
+            <label class="form-label">
+                Browse Files
+            </label>
+            <InputFile OnChange="@LoadFiles" style="background-color: rgb(34, 34, 34); color: #ffffff;" class="form-control"/>
+            
+            <label class="form-label" style="padding-top: 15px">
+                Privledge Token (If you don't specifiy then the max upload is @GetDefaultMaxUploadSize())
+            </label>
+            <input
+                @bind="_token"
+                @oninput='ui => _token = ui.Value?.ToString()'
+                style="background-color: rgb(34, 34, 34); color: #ffffff"
+                class="form-control"
+                type="text"/>
+        </div>
+    
+        <p>@_statusText</p>
+
+        <button class="btn btn-lg btn-primary btn-block" onclick="@Upload">
+            Upload
+        </button>
+
+    </div>
+}
+// Finished uploading
+else if (!_uploading) {
+    <p>File Uploaded: <a href="@_uploadUrl">@_uploadUrl</a></p>
+    
+    <button class="btn btn-lg btn-primary btn-block" onclick="@NewUpload">
+        Upload Another File
+    </button>
+}
+// Uploading
+else {
+    <p>@_statusText</p>
+}
+
+
+@code {
+
+    private IBrowserFile? _loadedFile;
+    private string _statusText = "";
+    private bool _uploaded;
+    private bool _uploading;
+    private string _uploadUrl = "";
+    private string? _token = "";
+
+    private void LoadFiles(InputFileChangeEventArgs e) {
+        _loadedFile = e.File;
+    }
+
+    private async void Upload() {
+        if (Program.Config == null) throw new Exception();
+        if (Program.StorageService == null) throw new Exception();
+        if (_loadedFile == null) {
+            _statusText = "No file selected";
+            return;
+        }
+        _statusText = $"Uploading {_loadedFile.Name}";
+        _uploaded = false;
+        _uploading = true;
+        InvokeAsync(StateHasChanged).Wait();
+        string newName = RandomFileName() + "." + GetFileExtension(_loadedFile.Name);
+        
+        // Get max upload size
+        TokenHandler tokenHandler = new TokenHandler(Program.Config);
+        if (!tokenHandler.ValidateCurrentToken(_token, out long maxSize, out _)) {
+            maxSize = Program.DefaultMaxUploadSize;
+        }
+
+        try {
+            await Program.StorageService.UploadFile(newName, _loadedFile.OpenReadStream(maxSize));
+        }
+        catch (IOException) {
+            _statusText = $"File too large. Max size is {GetDefaultMaxUploadSize(maxSize)}.";
+            return;
+        }
+        catch (Exception e) {
+            _statusText = "Upload failed: " + e.Message;
+            return;
+        }
+        Console.WriteLine("Uploaded File");
+        
+        _statusText = "Uploaded";
+        _uploading = false;
+        _uploaded = true;
+        _uploadUrl = Program.Config["my_host"] + "files/" + newName;
+        await InvokeAsync(StateHasChanged);
+    }
+    
+    // Function to generate a random file name
+    private string RandomFileName() {
+        string path = Path.GetRandomFileName();
+        path = path.Replace(".", "");
+        return path;
+    }
+    
+    // Function to get a files extension
+    private string GetFileExtension(string fileName) {
+        if (string.IsNullOrEmpty(fileName)) {
+            return "";
+        }
+        string[] fileParts = fileName.Split('.');
+        if (fileParts.Length == 1 || string.IsNullOrEmpty(fileParts[^1])) {
+            return "";
+        }
+        return fileParts[^1];
+    }
+    
+    private string GetDefaultMaxUploadSize(long size = -1) {
+        if (size == -1) size = Program.DefaultMaxUploadSize;
+        return size / 1000 / 1000 + " MB";
+    }
+
+    private async void NewUpload() {
+        _uploaded = false;
+        _uploadUrl = "";
+        _statusText = "";
+        _loadedFile = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
+}
