@@ -8,6 +8,7 @@ public static class Program {
 
     private static ConfigManager? _configManager;
     private static readonly Dictionary<string, string> ConfigDefaults = new() {
+        { "bind_url", "http://*:5000" },
         { "storage_service", "http" },
         { "http_authorization_token", "my very secure auth token" },
         { "http_url", "https://myverysecurestoragebackend.io/" },
@@ -125,6 +126,7 @@ public static class Program {
         builder.Services.AddServerSideBlazor();
         builder.Services.AddSingleton<HttpStorageService>();
         builder.Services.AddControllers();
+        builder.WebHost.UseUrls(Config["bind_url"]);
 
         WebApplication app = builder.Build();
 
