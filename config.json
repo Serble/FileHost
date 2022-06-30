@@ -7,5 +7,6 @@
   "default_max_upload_size": "1000000000",
   "token_issuer": "CoPokBl",
   "token_audience": "Privileged Users",
-  "token_secret": "2fe86a44-3f83-465a-8078-966e1dfdf272"
+  "token_secret": "2fe86a44-3f83-465a-8078-966e1dfdf272",
+  "bind_url": "http://*:5000"
 }
