@@ -89,6 +89,8 @@ else {
         }
         catch (IOException) {
             _statusText = $"File too large. Max size is {GetDefaultMaxUploadSize(maxSize)}.";
+            _uploaded = false;
+            _uploading = false;
             return;
         }
         catch (Exception e) {
