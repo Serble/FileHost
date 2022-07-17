@@ -30,6 +30,7 @@
 
         if (authed[0] != "true") {
             _error = true;
+            return;
         }
 
         CookieService cookies = new CookieService(JsRuntime);

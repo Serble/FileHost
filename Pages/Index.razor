@@ -1,7 +1,6 @@
 ﻿@page "/"
 @using FileHostingApi.Data
 @using System.Net
-@using System.Text.Json
 @using Microsoft.AspNetCore.WebUtilities
 @inject IJSRuntime JsRuntime
 @inject NavigationManager NavigationManager
@@ -85,19 +84,24 @@ else {
         }
 
         CookieService cookies = new CookieService(JsRuntime);
-        string token = await cookies.GetValue("serble_token");
+        string token = await cookies.GetValue("token");
         if (token == "") {
             return;
         }
         
         HttpClient client = new HttpClient();
         client.DefaultRequestHeaders.Add("Authorization", "Bearer " + token);
-        HttpResponseMessage response = await client.GetAsync("https://api.serble.com/api/v1/account/");
+        HttpResponseMessage response = await client.GetAsync("https://serble.net/api/v1/account/");
         if (response.StatusCode != HttpStatusCode.OK) {
             return;
         }
         _serbleLoggedIn = true;
         _token = token;
+        ReloadText();
+    }
+    
+    private void ReloadText() {
+        InvokeAsync(StateHasChanged).Wait();
     }
 
     private void LoadFiles(InputFileChangeEventArgs e) {
@@ -178,9 +182,9 @@ else {
     }
 
     private async void Login() {
-        string uri = "https://serble.com/appauth";
+        string uri = "https://serble.net/appauth";
         uri = QueryHelpers.AddQueryString(uri, "client_id", Program.Config!["serble_appid"]);
-        uri = QueryHelpers.AddQueryString(uri, "redirect_uri", Program.Config["my_host"]);
+        uri = QueryHelpers.AddQueryString(uri, "redirect_uri", Program.Config["my_host"] + "callback");
         uri = QueryHelpers.AddQueryString(uri, "response_type", "token");
         uri = QueryHelpers.AddQueryString(uri, "scope", "user_info");
         uri = QueryHelpers.AddQueryString(uri, "state", RandomFileName());

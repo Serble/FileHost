@@ -2,12 +2,12 @@
   "storage_service": "http",
   "http_authorization_token": "my very secure auth token",
   "http_url": "https://myverysecurestoragebackend.io/",
-  "my_host": "https://theplacewherethisappisaccessable.com/",
+  "my_host": "http://localhost:5000/",
   "max_upload_size": "1000000000",
   "default_max_upload_size": "1000000000",
   "token_issuer": "CoPokBl",
   "token_audience": "Privileged Users",
   "token_secret": "2fe86a44-3f83-465a-8078-966e1dfdf272",
   "bind_url": "http://*:5000",
-  "serble_appid": ""
+  "serble_appid": "d009ebce-4e72-403d-b7e4-d87117e6077f"
 }
