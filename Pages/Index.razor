@@ -93,7 +93,7 @@ else {
         
         HttpClient client = new HttpClient();
         client.DefaultRequestHeaders.Add("Authorization", "Bearer " + token);
-        HttpResponseMessage response = await client.GetAsync("https://serble.net/api/v1/account/");
+        HttpResponseMessage response = await client.GetAsync("https://serble.net/api/v1/account?appId=" + Program.Config!["serble_appid"]);
         if (response.StatusCode != HttpStatusCode.OK) {
             Logger.Debug("Not ok status code response from Serble Account API: " + response.StatusCode);
             Logger.Debug(await response.Content.ReadAsStringAsync());
