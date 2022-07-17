@@ -1,5 +1,10 @@
 ﻿@page "/"
 @using FileHostingApi.Data
+@using System.Net
+@using System.Text.Json
+@using Microsoft.AspNetCore.WebUtilities
+@inject IJSRuntime JsRuntime
+@inject NavigationManager NavigationManager
 
 <PageTitle>File Hosting</PageTitle>
 
@@ -19,15 +24,27 @@
             </label>
             <InputFile OnChange="@LoadFiles" style="background-color: rgb(34, 34, 34); color: #ffffff;" class="form-control"/>
             
-            <label class="form-label" style="padding-top: 15px">
-                Privledge Token (If you don't specifiy then the max upload is @GetDefaultMaxUploadSize())
-            </label>
-            <input
-                @bind="_token"
-                @oninput='ui => _token = ui.Value?.ToString()'
-                style="background-color: rgb(34, 34, 34); color: #ffffff"
-                class="form-control"
-                type="text"/>
+            @* <label class="form-label" style="padding-top: 15px"> *@
+            @*     Privledge Token (If you don't specifiy then the max upload is @GetDefaultMaxUploadSize()) *@
+            @* </label> *@
+            @* <input *@
+            @*     @bind="_token" *@
+            @*     @oninput='ui => _token = ui.Value?.ToString()' *@
+            @*     style="background-color: rgb(34, 34, 34); color: #ffffff" *@
+            @*     class="form-control" *@
+            @*     type="text"/> *@
+            
+            @if (Program.Config!["serble_appid"] != "") {
+                <div style="padding-top: 15px"></div>
+                @if (_serbleLoggedIn) {
+                    <p>Logged in</p>
+                }
+                else {
+                    <button class="btn btn-primary" @onclick="Login">Login With Serble</button>
+                }
+                
+            }
+
         </div>
     
         <p>@_statusText</p>
@@ -60,6 +77,28 @@ else {
     private bool _uploading;
     private string _uploadUrl = "";
     private string? _token = "";
+    private bool _serbleLoggedIn = false;
+
+    protected override async void OnAfterRender(bool firstRender) {
+        if (!firstRender) {
+            return;
+        }
+
+        CookieService cookies = new CookieService(JsRuntime);
+        string token = await cookies.GetValue("serble_token");
+        if (token == "") {
+            return;
+        }
+        
+        HttpClient client = new HttpClient();
+        client.DefaultRequestHeaders.Add("Authorization", "Bearer " + token);
+        HttpResponseMessage response = await client.GetAsync("https://api.serble.com/api/v1/account/");
+        if (response.StatusCode != HttpStatusCode.OK) {
+            return;
+        }
+        _serbleLoggedIn = true;
+        _token = token;
+    }
 
     private void LoadFiles(InputFileChangeEventArgs e) {
         _loadedFile = e.File;
@@ -136,6 +175,16 @@ else {
         _statusText = "";
         _loadedFile = null;
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async void Login() {
+        string uri = "https://serble.com/appauth";
+        uri = QueryHelpers.AddQueryString(uri, "client_id", Program.Config!["serble_appid"]);
+        uri = QueryHelpers.AddQueryString(uri, "redirect_uri", Program.Config["my_host"]);
+        uri = QueryHelpers.AddQueryString(uri, "response_type", "token");
+        uri = QueryHelpers.AddQueryString(uri, "scope", "user_info");
+        uri = QueryHelpers.AddQueryString(uri, "state", RandomFileName());
+        NavigationManager.NavigateTo(uri);
     }
 
 }

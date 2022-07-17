@@ -16,7 +16,8 @@ public static class Program {
         { "default_max_upload_size", "1000000000" },
         { "token_issuer", "CoPokBl" },
         { "token_audience", "Privileged Users" },
-        { "token_secret" , Guid.NewGuid().ToString() }
+        { "token_secret" , Guid.NewGuid().ToString() },
+        { "serble_appid", "" }
     };
     public static Dictionary<string, string>? Config;
     public static IStorageService? StorageService;

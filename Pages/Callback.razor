@@ -1,0 +1,39 @@
+@page "/Callback"
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.Extensions.Primitives
+@using FileHostingApi.Data
+@inject IJSRuntime JsRuntime
+@inject NavigationManager NavigationManager
+
+<h3>Callback</h3>
+
+@if (_error) {
+    <p>Error</p>
+}
+
+@code {
+    
+    private bool _error = false;
+
+    protected override async void OnAfterRender(bool firstRender) {
+        if (!firstRender) {
+            return;
+        }
+        
+        Uri absoluteUri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        Dictionary<string, StringValues> queryValues = QueryHelpers.ParseQuery(absoluteUri.Query);
+
+        if (!queryValues.TryGetValue("authorized", out StringValues authed)) {
+            _error = true;
+            return;
+        }
+
+        if (authed[0] != "true") {
+            _error = true;
+        }
+
+        CookieService cookies = new CookieService(JsRuntime);
+        await cookies.SetValue("token", queryValues["token"][0]);
+        NavigationManager.NavigateTo("/");
+    }
+}
