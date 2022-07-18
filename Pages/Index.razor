@@ -91,6 +91,7 @@ else {
         
         HttpClient client = new HttpClient();
         client.DefaultRequestHeaders.Add("Authorization", "Bearer " + token);
+        client.DefaultRequestHeaders.Add("X_App_Secret", Program.Config!["serble_appsecret"]);
         HttpResponseMessage response = await client.GetAsync("https://serble.net/api/v1/account/");
         if (response.StatusCode != HttpStatusCode.OK) {
             return;

@@ -1,6 +1,6 @@
 namespace FileHostingApi;
 
-using FileHostingApi.Data;
+using Data;
 using GeneralPurposeLib;
 using LogLevel = GeneralPurposeLib.LogLevel;
 
@@ -17,7 +17,8 @@ public static class Program {
         { "token_issuer", "CoPokBl" },
         { "token_audience", "Privileged Users" },
         { "token_secret" , Guid.NewGuid().ToString() },
-        { "serble_appid", "" }
+        { "serble_appid", "" },
+        { "serble_appsecret", "The client secret provided by Serble" }
     };
     public static Dictionary<string, string>? Config;
     public static IStorageService? StorageService;
