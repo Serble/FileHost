@@ -8,12 +8,15 @@
 <h3>Callback</h3>
 
 @if (_error) {
-    <p>Error</p>
+    <p>Error while logging in. <a href="/">Go Home</a></p>
+}
+else {
+    <p>Loading...</p>
 }
 
 @code {
     
-    private bool _error = false;
+    private bool _error;
 
     protected override async void OnAfterRender(bool firstRender) {
         if (!firstRender) {
@@ -25,11 +28,13 @@
 
         if (!queryValues.TryGetValue("authorized", out StringValues authed)) {
             _error = true;
+            ReloadText();
             return;
         }
 
         if (authed[0] != "true") {
             _error = true;
+            ReloadText();
             return;
         }
 
@@ -37,4 +42,9 @@
         await cookies.SetValue("token", queryValues["token"][0]);
         NavigationManager.NavigateTo("/");
     }
+    
+    private void ReloadText() {
+        InvokeAsync(StateHasChanged).Wait();
+    }
+    
 }

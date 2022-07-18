@@ -1,6 +1,7 @@
 ﻿@page "/"
 @using FileHostingApi.Data
 @using System.Net
+@using GeneralPurposeLib
 @using Microsoft.AspNetCore.WebUtilities
 @inject IJSRuntime JsRuntime
 @inject NavigationManager NavigationManager
@@ -76,7 +77,7 @@ else {
     private bool _uploading;
     private string _uploadUrl = "";
     private string? _token = "";
-    private bool _serbleLoggedIn = false;
+    private bool _serbleLoggedIn;
 
     protected override async void OnAfterRender(bool firstRender) {
         if (!firstRender) {
@@ -86,19 +87,23 @@ else {
         CookieService cookies = new CookieService(JsRuntime);
         string token = await cookies.GetValue("token");
         if (token == "") {
+            Logger.Debug("No token found");
             return;
         }
         
         HttpClient client = new HttpClient();
         client.DefaultRequestHeaders.Add("Authorization", "Bearer " + token);
         client.DefaultRequestHeaders.Add("X_App_Secret", Program.Config!["serble_appsecret"]);
-        HttpResponseMessage response = await client.GetAsync("https://serble.net/api/v1/account/");
+        HttpResponseMessage response = await client.GetAsync("https://serble.net/api/v1/account?appId=" + Program.Config!["serble_appid"]);
         if (response.StatusCode != HttpStatusCode.OK) {
+            Logger.Debug("Not ok status code response from Serble Account API: " + response.StatusCode);
+            Logger.Debug(await response.Content.ReadAsStringAsync());
             return;
         }
         _serbleLoggedIn = true;
         _token = token;
         ReloadText();
+        Logger.Debug("Logged in");
     }
     
     private void ReloadText() {
