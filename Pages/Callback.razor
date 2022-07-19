@@ -39,7 +39,8 @@ else {
         }
 
         CookieService cookies = new CookieService(JsRuntime);
-        await cookies.SetValue("token", queryValues["token"][0]);
+        await cookies.SetValue("userid", queryValues["userid"][0]);
+        await cookies.SetValue("serble_loggedin", "true");
         NavigationManager.NavigateTo("/");
     }
     

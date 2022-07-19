@@ -23,17 +23,7 @@
                 Browse Files
             </label>
             <InputFile OnChange="@LoadFiles" style="background-color: rgb(34, 34, 34); color: #ffffff;" class="form-control"/>
-            
-            @* <label class="form-label" style="padding-top: 15px"> *@
-            @*     Privledge Token (If you don't specifiy then the max upload is @GetDefaultMaxUploadSize()) *@
-            @* </label> *@
-            @* <input *@
-            @*     @bind="_token" *@
-            @*     @oninput='ui => _token = ui.Value?.ToString()' *@
-            @*     style="background-color: rgb(34, 34, 34); color: #ffffff" *@
-            @*     class="form-control" *@
-            @*     type="text"/> *@
-            
+
             @if (Program.Config!["serble_appid"] != "") {
                 <div style="padding-top: 15px"></div>
                 @if (_serbleLoggedIn) {
@@ -76,7 +66,7 @@ else {
     private bool _uploaded;
     private bool _uploading;
     private string _uploadUrl = "";
-    private string? _token = "";
+    private string? _userId = "";
     private bool _serbleLoggedIn;
 
     protected override async void OnAfterRender(bool firstRender) {
@@ -85,14 +75,21 @@ else {
         }
 
         CookieService cookies = new CookieService(JsRuntime);
-        string token = await cookies.GetValue("token");
-        if (token == "") {
+        
+        string isLoggedIn = await cookies.GetValue("serble_loggedin");
+        if (isLoggedIn != "true") {
+            Logger.Debug("No logged in cookie");
+            return;
+        }
+        
+        string userId = await cookies.GetValue("userid");
+        if (userId == "") {
             Logger.Debug("No token found");
             return;
         }
         
         HttpClient client = new HttpClient();
-        client.DefaultRequestHeaders.Add("SerbleAuth", Program.Config!["serble_appsecret"] + " " + token);
+        client.DefaultRequestHeaders.Add("SerbleAuth", Program.Config!["serble_appsecret"] + " " + userId);
         HttpResponseMessage response = await client.GetAsync("https://serble.net/api/v1/account?appId=" + Program.Config["serble_appid"]);
         if (response.StatusCode != HttpStatusCode.OK) {
             Logger.Debug("Not ok status code response from Serble Account API: " + response.StatusCode);
@@ -100,7 +97,7 @@ else {
             return;
         }
         _serbleLoggedIn = true;
-        _token = token;
+        _userId = userId;
         ReloadText();
         Logger.Debug("Logged in");
     }
@@ -128,7 +125,7 @@ else {
         
         // Get max upload size
         TokenHandler tokenHandler = new TokenHandler(Program.Config);
-        if (!tokenHandler.ValidateCurrentToken(_token, out long maxSize, out _)) {
+        if (!tokenHandler.ValidateCurrentToken(_userId, out long maxSize, out _)) {
             maxSize = Program.DefaultMaxUploadSize;
         }
 
