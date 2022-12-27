@@ -20,7 +20,7 @@
     <div>
         <div style="padding-bottom: 10px;">
             <label class="form-label">
-                Browse Files (Upload Limit: @UploadLimitManager.GetUploadLimit(_user))
+                Browse Files (Upload Limit: @(GetDefaultMaxUploadSize(UploadLimitManager.GetUploadLimit(_user))))
             </label>
             <InputFile OnChange="@LoadFiles" style="background-color: rgb(34, 34, 34); color: #ffffff;" class="form-control"/>
 
