@@ -1,28 +1,35 @@
+using FileHostingApi.Data.Storage;
+
 namespace FileHostingApi;
 
-using Data;
 using GeneralPurposeLib;
 using LogLevel = GeneralPurposeLib.LogLevel;
 
 public static class Program {
 
     private static ConfigManager? _configManager;
+    
+    // UPLOAD LIMITS ARE IN MB
     private static readonly Dictionary<string, string> ConfigDefaults = new() {
         { "bind_url", "http://*:5000" },
         { "storage_service", "http" },
         { "http_authorization_token", "my very secure auth token" },
         { "http_url", "https://myverysecurestoragebackend.io/" },
         { "my_host" , "https://theplacewherethisappisaccessable.com/" },
-        { "default_max_upload_size", "1000000000" },
+        { "local_store_path", "/filehost" },
+        { "not_logged_in_upload_limit", "10" },
+        { "logged_in_upload_limit", "50" },
+        { "premium_upload_limit", "100" },
         { "token_issuer", "CoPokBl" },
         { "token_audience", "Privileged Users" },
         { "token_secret" , Guid.NewGuid().ToString() },
+        { "serble_api_url", "https://api.serble.net/api/v1/" },
         { "serble_appid", "" },
-        { "serble_appsecret", "The client secret provided by Serble" }
+        { "serble_appsecret", "The client secret provided by Serble" },
+        { "oauth_url", "https://serble.net/oauth/authorize" }
     };
     public static Dictionary<string, string>? Config;
     public static IStorageService? StorageService;
-    public static int DefaultMaxUploadSize;
 
     private static int Main(string[] args) {
         // Logger
@@ -37,11 +44,9 @@ public static class Program {
         // Storage service
         StorageService = Config["storage_service"] switch {
             "http" => new HttpStorageService(),
+            "local" => new LocalStorageService(),
             _ => throw new Exception("Unknown storage service")
         };
-        
-        // Max upload size
-        DefaultMaxUploadSize = int.Parse(Config["default_max_upload_size"]);
 
         if (args.Length != 0) {
 
@@ -110,12 +115,6 @@ public static class Program {
                         return 1;
                     }
                     Console.WriteLine("File uploaded");
-                    return 0;
-                
-                case "admintoken":
-                    TokenHandler tokenHandler = new TokenHandler(Config);
-                    string token = tokenHandler.GenerateToken(1000000000000, true);
-                    Console.WriteLine("Admin Token:\n" + token);
                     return 0;
 
             }

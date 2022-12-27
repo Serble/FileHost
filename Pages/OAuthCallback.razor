@@ -1,0 +1,72 @@
+@page "/OAuthCallback"
+@using System.Web
+@using System.Collections.Specialized
+@using FileHostingApi.Data
+@using FileHostingApi.Data.Schemas
+@using SerbleAi.Data
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
+
+<h3>@(_state == "" ? "Logging you in..." : "")</h3>
+
+<p>@_state</p>
+
+@code {
+    private string _state = "";
+    
+    // OnAfterRenderAsync
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (!firstRender) {
+            return;
+        }
+        HtmlInteractor htmlInteractor = new HtmlInteractor(JsRuntime);
+        // Get oauth callback query parameters
+        Uri uri = new(NavigationManager.Uri);
+        NameValueCollection query = HttpUtility.ParseQueryString(uri.Query);
+        string? code = query["code"];
+        string? state = query["state"];
+        string? authorized = query["authorized"];
+        string? stateFromStorage = await JsRuntime.InvokeAsync<string>("localStorage.getItem", "oauth_state");
+        await htmlInteractor.Log("OAuth Code: " + code);
+        await htmlInteractor.Log("OAuth Authorized: " + authorized);
+        await htmlInteractor.Log("OAuth State: " + state);
+        await htmlInteractor.Log("OAuth State from storage: " + stateFromStorage);
+
+        if (state != stateFromStorage) {
+            _state = "OAuth state mismatch";
+            StateHasChanged();
+            return;
+        }
+
+        if (authorized != "true") {
+            _state = "User did not authorize";
+            StateHasChanged();
+            return;
+        }
+        
+        // Ask Serble for refresh and access tokens
+        SerbleApiResponse<(string, string)> response = await SerbleApiHandler.GetRefreshToken(code!);
+
+        if (!response.Success) {
+            _state = response.ErrorMessage;
+            StateHasChanged();
+            return;
+        }
+        
+        // Get user
+        SerbleApiResponse<User> userResponse = await SerbleApiHandler.GetUser(response.ResponseObject.Item2);
+        
+        if (!userResponse.Success) {
+            _state = userResponse.ErrorMessage;
+            StateHasChanged();
+            return;
+        }
+        User user = userResponse.ResponseObject!;
+
+        // Save refresh token to a cookie                                                                 1 year
+        await new Cookie(JsRuntime).SetValue("refresh_token", response.ResponseObject.Item1, 24 * 365);
+
+        NavigationManager.NavigateTo("/", true);
+    }
+
+}

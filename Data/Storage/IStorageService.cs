@@ -1,4 +1,4 @@
-namespace FileHostingApi.Data; 
+namespace FileHostingApi.Data.Storage; 
 
 public interface IStorageService {
     Task UploadFile(string fileName, Stream fileContent);

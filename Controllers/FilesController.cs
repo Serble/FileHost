@@ -1,4 +1,3 @@
-using FileHostingApi.Data;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FileHostingApi.Controllers; 

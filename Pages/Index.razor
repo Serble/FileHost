@@ -1,12 +1,12 @@
 ﻿@page "/"
 @using FileHostingApi.Data
-@using System.Net
-@using GeneralPurposeLib
+@using FileHostingApi.Data.Schemas
 @using Microsoft.AspNetCore.WebUtilities
 @inject IJSRuntime JsRuntime
 @inject NavigationManager NavigationManager
 
 <PageTitle>File Hosting</PageTitle>
+<RequireLogin RedirectToLogin="false" Callback="OnLogin"></RequireLogin>
 
 <h1>File Host</h1>
 <p>
@@ -30,7 +30,7 @@
                     <p>Logged in</p>
                 }
                 else {
-                    <button class="btn btn-primary" @onclick="Login">Login With Serble</button>
+                    <a class="btn btn-primary" href="/makelogin">Login With Serble</a>
                 }
                 
             }
@@ -66,44 +66,17 @@ else {
     private bool _uploaded;
     private bool _uploading;
     private string _uploadUrl = "";
-    private string? _userId = "";
+    private User? _user;
     private bool _serbleLoggedIn;
 
-    protected override async void OnAfterRender(bool firstRender) {
-        if (!firstRender) {
-            return;
-        }
-
-        CookieService cookies = new CookieService(JsRuntime);
-        
-        string isLoggedIn = await cookies.GetValue("serble_loggedin");
-        if (isLoggedIn != "true") {
-            Logger.Debug("No logged in cookie");
-            return;
-        }
-        
-        string userId = await cookies.GetValue("userid");
-        if (userId == "") {
-            Logger.Debug("No token found");
-            return;
-        }
-        
-        HttpClient client = new HttpClient();
-        client.DefaultRequestHeaders.Add("SerbleAuth", Program.Config!["serble_appsecret"] + " " + userId);
-        HttpResponseMessage response = await client.GetAsync("https://serble.net/api/v1/account?appId=" + Program.Config["serble_appid"]);
-        if (response.StatusCode != HttpStatusCode.OK) {
-            Logger.Debug("Not ok status code response from Serble Account API: " + response.StatusCode);
-            Logger.Debug(await response.Content.ReadAsStringAsync());
+    private async Task OnLogin((User?, string) data) {
+        User? user = data.Item1;
+        if (user == null) {
             return;
         }
         _serbleLoggedIn = true;
-        _userId = userId;
-        ReloadText();
-        Logger.Debug("Logged in");
-    }
-    
-    private void ReloadText() {
-        InvokeAsync(StateHasChanged).Wait();
+        _user = user;
+        StateHasChanged();
     }
 
     private void LoadFiles(InputFileChangeEventArgs e) {
@@ -124,10 +97,7 @@ else {
         string newName = RandomFileName() + "." + GetFileExtension(_loadedFile.Name);
         
         // Get max upload size
-        TokenHandler tokenHandler = new TokenHandler(Program.Config);
-        if (!tokenHandler.ValidateCurrentToken(_userId, out long maxSize, out _)) {
-            maxSize = Program.DefaultMaxUploadSize;
-        }
+        long maxSize = UploadLimitManager.GetUploadLimit(_user);
 
         try {
             await Program.StorageService.UploadFile(newName, _loadedFile.OpenReadStream(maxSize));
@@ -171,7 +141,6 @@ else {
     }
     
     private string GetDefaultMaxUploadSize(long size = -1) {
-        if (size == -1) size = Program.DefaultMaxUploadSize;
         return size / 1000 / 1000 + " MB";
     }
 
@@ -183,7 +152,7 @@ else {
         await InvokeAsync(StateHasChanged);
     }
 
-    private async void Login() {
+    private void Login() {
         string uri = "https://serble.net/appauth";
         uri = QueryHelpers.AddQueryString(uri, "client_id", Program.Config!["serble_appid"]);
         uri = QueryHelpers.AddQueryString(uri, "redirect_uri", Program.Config["my_host"] + "callback");

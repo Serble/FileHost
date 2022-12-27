@@ -2,7 +2,7 @@ using System.Net;
 using System.Text.Encodings.Web;
 using GeneralPurposeLib;
 
-namespace FileHostingApi.Data; 
+namespace FileHostingApi.Data.Storage; 
 
 public class HttpStorageService : IStorageService {
     

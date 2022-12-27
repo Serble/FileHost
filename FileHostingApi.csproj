@@ -7,13 +7,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Reference Include="GeneralPurposeLib">
-        <HintPath>GeneralPurposeLib.dll</HintPath>
-      </Reference>
+      <PackageReference Include="GeneralPurposeLib" Version="1.1.2" />
+      <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.20.0" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.20.0" />
+      <Folder Include="files" />
     </ItemGroup>
 
 </Project>

@@ -1,0 +1,124 @@
+@using GeneralPurposeLib
+@using FileHostingApi.Data.Schemas
+@using FileHostingApi.Data
+@using SerbleAi.Data
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
+
+@code {
+
+    [Parameter]
+    public Func<(User?, string), Task>? Callback { get; set; } = _ => Task.CompletedTask; 
+
+    [Parameter]
+    public bool RedirectToLogin { get; set; } = true;
+    
+    [Parameter]
+    public bool RedirectToAccessDenied { get; set; }
+    
+    [Parameter]
+    public bool NoLockdownCheck { get; set; }
+    
+    [Parameter]
+    public bool TryLoginEvenIfWhitelist { get; set; }
+
+    [Parameter]
+    public AccountAccessLevel RequiredAccessLevel { get; set; } = AccountAccessLevel.Normal;
+
+    private PageType PageType => RequiredAccessLevel switch {
+        AccountAccessLevel.Normal => PageType.Account,
+        AccountAccessLevel.Admin => PageType.Admin,
+        _ => PageType.NonAccount
+    };
+
+    public void RunCheck(Func<(User?, string), Task> callback) {
+        Callback = callback;
+        RedirectToLogin = false;
+        OnAfterRender(true);
+    }
+
+    protected override async void OnAfterRender(bool firstRender) {
+        if (!firstRender) return;
+        Cookie cookieHandler = new (JsRuntime);
+        HtmlInteractor htmlInteractor = new(JsRuntime);
+        await htmlInteractor.Log("Checking if user is logged in...");
+        
+        // Check for oauth token
+        string token = await cookieHandler.GetValue("refresh_token");
+        if (token == "") {
+            token = "urmum";  // If no token, set to random string so it fails because invalid token
+        }
+        
+        // Get access token
+        SerbleApiResponse<string> tokenResponse = await SerbleApiHandler.GetAccessToken(token);
+        if (!tokenResponse.Success) {
+            //await htmlInteractor.Log(tokenResponse.ErrorMessage);
+            await NotLoggedIn();
+            return;
+        }
+        string accessToken = tokenResponse;
+
+        SerbleApiResponse<User> response = await SerbleApiHandler.GetUser(accessToken);
+        if (!response.Success) {
+            await htmlInteractor.Log(response.ErrorMessage);
+            await NotLoggedIn();
+            return;
+        }
+
+        if ((int)RequiredAccessLevel > response.ResponseObject!.PermLevel!.Value) {
+            // User does not have required access level
+            await htmlInteractor.Log("User does not have required access level");
+            await NotLoggedIn();
+            return;
+        }
+
+        try {
+            await htmlInteractor.Log("User is logged in as " + response.ResponseObject!.Username);
+        }
+        catch (Exception) {
+            // Ignore because it doesn't matter
+        }
+
+        // Callback
+        await Callback!.Invoke((response.ResponseObject, accessToken));
+    }
+    
+    private async Task NotLoggedIn(bool disabledAccount = false) {
+        // Redirect if redirect is enabled
+        HtmlInteractor htmlInteractor = new(JsRuntime);
+        await htmlInteractor.Log("User is not logged in");
+        if (RedirectToAccessDenied) {
+            NavigationManager.NavigateTo("/accessdenied?page=" + Uri.EscapeDataString(NavigationManager.Uri));
+            return;
+        }
+        if (disabledAccount) {
+            NavigationManager.NavigateTo("/accountdisabled");
+            return;
+        }
+        if (RedirectToLogin) {
+            await htmlInteractor.Log("Invoking login");
+            await AttemptOAuth();
+            return;
+        }
+        
+        // Otherwise run callback with null user
+        await Callback!.Invoke((null, ""));
+    }
+
+    private void LockedDown() {
+        NavigationManager.NavigateTo("/lockdown");
+    }
+    
+    private async Task AttemptOAuth() {
+        HtmlInteractor htmlInteractor = new(JsRuntime);
+        await htmlInteractor.Log("Attempting OAuth...");
+        
+        string state = Guid.NewGuid().ToString().Replace("-", "");
+        // Save state to local storage
+        await JsRuntime.InvokeVoidAsync("localStorage.setItem", "oauth_state", state);
+        NavigationManager.NavigateTo(
+            $"{Program.Config!["oauth_url"]}?redirect_uri=" + Uri.EscapeDataString(NavigationManager.BaseUri + "oauthcallback") +
+            $"&client_id={Program.Config["serble_appid"]}&response_type=token&scope=user_info&state={state}");
+    }
+
+}

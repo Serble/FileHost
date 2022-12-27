@@ -1,0 +1,8 @@
+@page "/MakeLogin"
+<RequireLogin TryLoginEvenIfWhitelist="true" Callback="tuple => { _username = tuple.Item1!.Username!; StateHasChanged(); return Task.CompletedTask; }"></RequireLogin>
+
+<h3>You are logged in as @_username</h3>
+
+@code {
+    private string _username = "LOADING";
+}
