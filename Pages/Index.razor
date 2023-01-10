@@ -2,6 +2,8 @@
 @using FileHostingApi.Data
 @using FileHostingApi.Data.Schemas
 @using Microsoft.AspNetCore.WebUtilities
+@using System.Net
+@using GeneralPurposeLib
 @inject IJSRuntime JsRuntime
 @inject NavigationManager NavigationManager
 
@@ -24,7 +26,7 @@
             </label>
             <InputFile OnChange="@LoadFiles" style="background-color: rgb(34, 34, 34); color: #ffffff;" class="form-control"/>
 
-            @if (Program.Config!["serble_appid"] != "") {
+            @if (Program.Config!["serble_appid"] != "" && Program.Config["integrate_serble"] == "true") {
                 <div style="padding-top: 15px"></div>
                 @if (_serbleLoggedIn) {
                     <p>Logged in</p>
@@ -112,12 +114,12 @@ else {
             _statusText = "Upload failed: " + e.Message;
             return;
         }
-        Console.WriteLine("Uploaded File");
+        Logger.Debug("Uploaded File");
         
         _statusText = "Uploaded";
         _uploading = false;
         _uploaded = true;
-        _uploadUrl = Program.Config["my_host"] + "files/" + newName;
+        _uploadUrl = Program.Config["my_host"] + "files/" + newName + "?name=" + WebUtility.UrlEncode(_loadedFile.Name);
         await InvokeAsync(StateHasChanged);
     }
     

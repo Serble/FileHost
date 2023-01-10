@@ -6,14 +6,15 @@ namespace FileHostingApi.Controllers;
 [Route("files")]
 public class FilesController : Controller {
     
-    [HttpGet("{fileName}")]
-    public async Task<IActionResult> Get(string fileName) {
+    [HttpGet("{fileId}")]
+    public async Task<IActionResult> Get(string fileId, [FromQuery] string? name = null) {
         if (Program.StorageService == null) throw new Exception();
-        Stream? file = await Program.StorageService.GetFile(fileName);
+        name ??= fileId;
+        Stream? file = await Program.StorageService.GetFile(fileId);
         if (file == null) {
-            return NotFound("File not found");
+            return NotFound();
         }
-        // Convert file to a steam and return it
+        Response.Headers.ContentDisposition = $"attachment; filename=\"{name}\"";
         return File(file, "application/octet-stream");
     }
     

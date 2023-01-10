@@ -26,7 +26,8 @@ public static class Program {
         { "serble_api_url", "https://api.serble.net/api/v1/" },
         { "serble_appid", "" },
         { "serble_appsecret", "The client secret provided by Serble" },
-        { "oauth_url", "https://serble.net/oauth/authorize" }
+        { "oauth_url", "https://serble.net/oauth/authorize" },
+        { "integrate_serble", "true" }
     };
     public static Dictionary<string, string>? Config;
     public static IStorageService? StorageService;
